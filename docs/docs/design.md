@@ -42,6 +42,7 @@ Full data model: [data-model.md](data-model.md)
 
 - POST /folders
 - POST /bookmarks
+- GET /folders
 - GET /folders/:folderId/bookmarks?sort=…&limit=…&offset=…
 - GET /bookmarks?name=…
 - PUT /bookmarks/:bookmarkId
