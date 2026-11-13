@@ -152,11 +152,11 @@ Get a folder's bookmarks, sorted and paginated.
 - Path: `folderId` (the folder's id)
 - Query:
 
-| Name   | Type   | Required | Description                          | Default  |
-| ------ | ------ | -------- | ------------------------------------ | -------- |
-| sort   | text   | no       | `newest` or `oldest` (by created_at) | `newest` |
-| limit  | number | no       | How many to return (1–100)           | 20       |
-| offset | number | no       | How many to skip                     | 0        |
+| Name   | Type   | Required | Description                                   | Default  |
+| ------ | ------ | -------- | --------------------------------------------- | -------- |
+| sort   | text   | no       | `newest` or `oldest` (by created_at, then id) | `newest` |
+| limit  | number | no       | How many to return (1–100)                    | 20       |
+| offset | number | no       | How many to skip                              | 0        |
 
 **Success: 200 OK**
 
@@ -193,9 +193,11 @@ Search the user's bookmarks by name.
 
 - Query:
 
-| Name | Type | Required | Description                           | Default |
-| ---- | ---- | -------- | ------------------------------------- | ------- |
-| name | text | yes      | Words to search for in bookmark names | –       |
+| Name   | Type   | Required | Description                           | Default |
+| ------ | ------ | -------- | ------------------------------------- | ------- |
+| name   | text   | yes      | Words to search for in bookmark names | –       |
+| limit  | number | no       | How many to return (1–100)            | 20      |
+| offset | number | no       | How many to skip                      | 0       |
 
 **Success: 200 OK**
 
@@ -218,10 +220,10 @@ No match returns an empty list: `{ "bookmarks": [] }`.
 
 **Errors**
 
-| Status | When                     |
-| ------ | ------------------------ |
-| 401    | Missing or invalid token |
-| 422    | name missing or empty    |
+| Status | When                                                                    |
+| ------ | ----------------------------------------------------------------------- |
+| 401    | Missing or invalid token                                                |
+| 422    | name missing or empty; limit not 1–100; offset negative or not a number |
 
 ---
 

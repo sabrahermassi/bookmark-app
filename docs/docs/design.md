@@ -50,7 +50,7 @@ Full data model: [data-model.md](data-model.md)
 
 Full details: [api.md](api.md)
 
-![System design](diagrams/system-design.png)
+![System design](../diagrams/system-design.png)
 
 ## Capacity estimates
 

@@ -36,7 +36,7 @@
 
 ## Indexes
 
-| Table     | Columns                 | Type            | Query it serves                                 |
-| --------- | ----------------------- | --------------- | ----------------------------------------------- |
-| bookmarks | name                    | GIN (full-text) | GET /bookmarks?name= (search by name)           |
-| bookmarks | (folder_id, created_at) | B-tree          | GET /folders/:folderId/bookmarks (newest first) |
+| Table     | Columns                     | Type            | Query it serves                                 |
+| --------- | --------------------------- | --------------- | ----------------------------------------------- |
+| bookmarks | name                        | GIN (full-text) | GET /bookmarks?name= (search by name)           |
+| bookmarks | (folder_id, created_at, id) | B-tree          | GET /folders/:folderId/bookmarks (newest first) |
