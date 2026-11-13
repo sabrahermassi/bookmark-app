@@ -42,7 +42,7 @@ Full data model: [data-model.md](data-model.md)
 
 - POST /folders
 - POST /bookmarks
-- GET /folders/:folderId/bookmarks
+- GET /folders/:folderId/bookmarks?sort=…&limit=…&offset=…
 - GET /bookmarks?name=…
 - PUT /bookmarks/:bookmarkId
 - DELETE /bookmarks/:bookmarkId
@@ -50,3 +50,14 @@ Full data model: [data-model.md](data-model.md)
 Full details: [api.md](api.md)
 
 ![System design](diagrams/system-design.png)
+
+## Capacity estimates
+
+- Normal: 250 requests/second
+- Peak (3x): 750 requests/second
+- Writes vs reads: 1 out of 10 are write requests
+
+What this changes in the design:
+
+- One backend instance and one Postgres can handle the load even at peak, so no cache and no sharding.
+- The second backend instance and the standby database are there for availability, not for load.
