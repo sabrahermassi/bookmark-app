@@ -9,7 +9,7 @@ const prisma = new PrismaClient({
 const app = express();
 app.use(express.json());
 
-app.get("/", async (_req, res) => {
+app.get("/api", async (_req, res) => {
   await prisma.$queryRaw`SELECT 1`;
   res.json({ message: "OK" });
 });
