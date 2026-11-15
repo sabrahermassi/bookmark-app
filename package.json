@@ -20,6 +20,7 @@
     "doc": "docs"
   },
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "concurrently \"tsc --noEmit --watch\" \"tsx watch --env-file=.env apps/api/src/index.ts\"",
     "typecheck": "tsc --noEmit",
     "start": "tsc && node --env-file=.env dist/index.js"
