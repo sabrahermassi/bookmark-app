@@ -4,17 +4,22 @@ export function App() {
   const [status, setStatus] = useState("Checking...");
 
   useEffect(() => {
+    let active = true;
+
     async function checkApi() {
       try {
         const res = await fetch("/api");
         if (!res.ok) throw new Error();
-        setStatus("API and database are up");
+        if (active) setStatus("API and database are up");
       } catch {
-        setStatus("API or database is down");
+        if (active) setStatus("API or database is down");
       }
     }
-
     checkApi();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
