@@ -1,5 +1,6 @@
 import express from "express";
 import type { Express, Request, Response } from "express";
+import type { Folder, Bookmark } from "./generated/prisma/client.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client.js";
 
@@ -46,6 +47,25 @@ type BookmarkParams = {
 };
 type BookmarkUpdateBody = Partial<BookmarkCreateBody>;
 
+function toBookmarkresponse(bookmark: Bookmark): BookmarkResponse {
+  return {
+    id: bookmark.id,
+    folder_id: bookmark.folderId,
+    user_id: bookmark.userId,
+    name: bookmark.name,
+    url: bookmark.url,
+    created_at: bookmark.createdAt,
+  };
+}
+
+function toFolderResponse(folder: Folder): FolderResponse {
+  return {
+    id: folder.id,
+    user_id: folder.userId,
+    name: folder.name,
+    created_at: folder.createdAt,
+  };
+}
 const TEST_USER_ID = "d604d922-de6a-4052-bc49-2ce8e2814e8d";
 
 const prisma = new PrismaClient({
@@ -73,12 +93,7 @@ app.post(
       data: { name, userId: TEST_USER_ID },
     });
 
-    res.status(201).json({
-      id: folder.id,
-      user_id: folder.userId,
-      name: folder.name,
-      created_at: folder.createdAt,
-    });
+    res.status(201).json(toFolderResponse(folder));
   },
 );
 
@@ -94,12 +109,7 @@ app.get(
     });
 
     res.json({
-      folders: folders.map((folder) => ({
-        id: folder.id,
-        user_id: folder.userId,
-        name: folder.name,
-        created_at: folder.createdAt,
-      })),
+      folders: folders.map((folder) => toFolderResponse(folder)),
     });
   },
 );
@@ -122,14 +132,7 @@ app.post(
       },
     });
 
-    res.status(201).json({
-      id: bookmark.id,
-      folder_id: bookmark.folderId,
-      user_id: bookmark.userId,
-      name: bookmark.name,
-      url: bookmark.url,
-      created_at: bookmark.createdAt,
-    });
+    res.status(201).json(toBookmarkresponse(bookmark));
   },
 );
 
@@ -161,14 +164,7 @@ app.get(
     });
 
     res.json({
-      bookmarks: bookmarks.map((bookmark) => ({
-        id: bookmark.id,
-        folder_id: bookmark.folderId,
-        user_id: bookmark.userId,
-        name: bookmark.name,
-        url: bookmark.url,
-        created_at: bookmark.createdAt,
-      })),
+      bookmarks: bookmarks.map((bookmark) => toBookmarkresponse(bookmark)),
     });
   },
 );
@@ -199,14 +195,7 @@ app.get(
     });
 
     res.json({
-      bookmarks: bookmarks.map((bookmark) => ({
-        id: bookmark.id,
-        folder_id: bookmark.folderId,
-        user_id: bookmark.userId,
-        name: bookmark.name,
-        url: bookmark.url,
-        created_at: bookmark.createdAt,
-      })),
+      bookmarks: bookmarks.map((bookmark) => toBookmarkresponse(bookmark)),
     });
   },
 );
@@ -230,14 +219,7 @@ app.put(
       },
     });
 
-    res.json({
-      id: bookmark.id,
-      folder_id: bookmark.folderId,
-      user_id: bookmark.userId,
-      name: bookmark.name,
-      url: bookmark.url,
-      created_at: bookmark.createdAt,
-    });
+    res.json(toBookmarkresponse(bookmark));
   },
 );
 
