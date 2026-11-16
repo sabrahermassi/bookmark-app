@@ -150,7 +150,7 @@ Create a bookmark in a folder.
 **Retry with the same Idempotency-Key**
 
 The bookmark is not created again. The response is the same 201 and body as the first request.
-Keys are kept for 24 hours.
+Keys are kept for 24 hours (Planned in later steps).
 
 **Errors**
 

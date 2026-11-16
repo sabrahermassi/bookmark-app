@@ -83,7 +83,7 @@ export const createBookmark = async (
   const { folder_id, name, url } = req.body ?? {};
   const idempotencyKey = req.get("Idempotency-Key"); // undefined if not sent
   const requestHash = createHash("sha256")
-    .update(JSON.stringify(req.body))
+    .update(JSON.stringify(req.body ?? {}))
     .digest("hex");
   const fields: Record<string, string> = {};
 
@@ -178,6 +178,13 @@ export const createBookmark = async (
           where: { userId_key: { userId: TEST_USER_ID, key: idempotencyKey } },
         });
         if (saved !== null) {
+          if (saved.requestHash !== requestHash) {
+            throw new AppError(
+              422,
+              "IDEMPOTENCY_KEY_REUSED",
+              "This key was already used with a different body.",
+            );
+          }
           res
             .status(saved.responseStatus)
             .json(saved.responseBody as unknown as BookmarkResponse);

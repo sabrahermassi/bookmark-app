@@ -17,7 +17,7 @@ DATABASE_URL=postgresql://bookmarks:bookmarks@localhost:5432/bookmarks
 
 ```
 npm install
-docker compose up -d
+docker compose up -d --wait
 npx prisma migrate dev
 npm run db:seed
 npm run dev
