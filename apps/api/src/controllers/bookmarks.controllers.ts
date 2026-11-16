@@ -93,7 +93,7 @@ export const createBookmark = async (
   if (
     typeof url !== "string" ||
     !URL.canParse(url) ||
-    !url.startsWith("http")
+    !(url.startsWith("http://") || url.startsWith("https://"))
   ) {
     fields.url = "URL must be a valid http or https link";
   }
@@ -243,7 +243,12 @@ export const searchUsersBookmarks = async (
   }
 
   if (Object.keys(fields).length > 0) {
-    throw new AppError(404, "NOT_FOUND", "Some fields are invalid", fields);
+    throw new AppError(
+      422,
+      "VALIDATION_ERROR",
+      "Some fields are invalid",
+      fields,
+    );
   }
 
   const bookmarks = await prisma.bookmark.findMany({
@@ -286,7 +291,9 @@ export const editBookmark = async (
 
   if (
     url !== undefined &&
-    (typeof url !== "string" || !URL.canParse(url) || !url.startsWith("http"))
+    (typeof url !== "string" ||
+      !URL.canParse(url) ||
+      !(url.startsWith("http://") || url.startsWith("https://")))
   ) {
     fields.url = "URL must be a valid http or https link";
   }

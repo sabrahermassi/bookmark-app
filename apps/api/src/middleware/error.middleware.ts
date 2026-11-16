@@ -47,6 +47,23 @@ export const errorHandler = (
     return;
   }
 
+  // Other body-reading errors from express.json() (413 too large, 415 encoding)
+  if (
+    err instanceof Error &&
+    "status" in err &&
+    typeof err.status === "number" &&
+    err.status >= 400 &&
+    err.status < 500
+  ) {
+    res.status(err.status).json({
+      error: {
+        code: "BAD_REQUEST",
+        message: "The request body could not be read.",
+      },
+    });
+    return;
+  }
+
   console.error(err);
   res.status(500).json({
     error: { code: "INTERNAL_ERROR", message: "Something went wrong." },

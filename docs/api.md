@@ -15,7 +15,7 @@ Every error uses this shape:
 ```json
 {
   "error": {
-    "code": "DUPLICATE_NAME",
+    "code": "DUPLICATE",
     "message": "You already have a folder with this name."
   }
 }
@@ -32,6 +32,17 @@ Validation errors also list the invalid fields:
   }
 }
 ```
+
+Error codes:
+
+| Code               | Status | When                                   |
+| ------------------ | ------ | -------------------------------------- |
+| `INVALID_JSON`     | 400    | The body is not valid JSON             |
+| `BAD_REQUEST`      | 4xx    | The body could not be read (too large) |
+| `NOT_FOUND`        | 404    | Unknown route, or not the user's       |
+| `DUPLICATE`        | 409    | Same name or url already exists        |
+| `VALIDATION_ERROR` | 422    | One or more fields are invalid         |
+| `INTERNAL_ERROR`   | 500    | Anything unexpected                    |
 
 ---
 
