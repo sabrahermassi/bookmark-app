@@ -31,6 +31,22 @@ export const errorHandler = (
     });
     return;
   }
+
+  // Broken JSON in the request body (thrown by express.json())
+  if (
+    err instanceof SyntaxError &&
+    "type" in err &&
+    err.type === "entity.parse.failed"
+  ) {
+    res.status(400).json({
+      error: {
+        code: "INVALID_JSON",
+        message: "The request body is not valid JSON.",
+      },
+    });
+    return;
+  }
+
   console.error(err);
   res.status(500).json({
     error: { code: "INTERNAL_ERROR", message: "Something went wrong." },
