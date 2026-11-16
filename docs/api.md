@@ -35,14 +35,15 @@ Validation errors also list the invalid fields:
 
 Error codes:
 
-| Code               | Status | When                                   |
-| ------------------ | ------ | -------------------------------------- |
-| `INVALID_JSON`     | 400    | The body is not valid JSON             |
-| `BAD_REQUEST`      | 4xx    | The body could not be read (too large) |
-| `NOT_FOUND`        | 404    | Unknown route, or not the user's       |
-| `DUPLICATE`        | 409    | Same name or url already exists        |
-| `VALIDATION_ERROR` | 422    | One or more fields are invalid         |
-| `INTERNAL_ERROR`   | 500    | Anything unexpected                    |
+| Code                     | Status | When                                        |
+| ------------------------ | ------ | ------------------------------------------- |
+| `INVALID_JSON`           | 400    | The body is not valid JSON                  |
+| `BAD_REQUEST`            | 4xx    | The body could not be read (too large)      |
+| `NOT_FOUND`              | 404    | Unknown route, or not the user's            |
+| `DUPLICATE`              | 409    | Same name or url already exists             |
+| `VALIDATION_ERROR`       | 422    | One or more fields are invalid              |
+| `IDEMPOTENCY_KEY_REUSED` | 422    | The same key was sent with a different body |
+| `INTERNAL_ERROR`         | 500    | Anything unexpected                         |
 
 ---
 
@@ -130,6 +131,9 @@ Create a bookmark in a folder.
 }
 ```
 
+- Header (optional): `Idempotency-Key: <uuid>`. Make a new key for each new bookmark,
+  and send the same key again when retrying that request.
+
 **Success: 201 Created**
 
 ```json
@@ -143,6 +147,11 @@ Create a bookmark in a folder.
 }
 ```
 
+**Retry with the same Idempotency-Key**
+
+The bookmark is not created again. The response is the same 201 and body as the first request.
+Keys are kept for 24 hours (Planned in later steps).
+
 **Errors**
 
 | Status | When                                                                   |
@@ -151,6 +160,7 @@ Create a bookmark in a folder.
 | 404    | Folder doesn't exist or belongs to another user                        |
 | 409    | A bookmark with this name or url already exists in this folder         |
 | 422    | folder_id, name or url missing, empty or not text; url not a valid URL |
+| 422    | Idempotency-Key already used with a different body                     |
 
 ---
 
