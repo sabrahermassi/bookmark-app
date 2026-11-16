@@ -6,3 +6,45 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  folders   Folder[]
+  bookmarks Bookmark[]
+
+  @@map("users")
+}
+
+model Folder {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookmarks Bookmark[]
+
+  @@unique([userId, name])
+  @@map("folders")
+}
+
+model Bookmark {
+  id        String   @id @default(uuid()) @db.Uuid
+  folderId  String   @map("folder_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  url       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  folder Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, name])
+  @@unique([folderId, url])
+  @@index([folderId, createdAt, id])
+  @@map("bookmarks")
+}
