@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient, Prisma } from "../generated/prisma/client.js";
 import type {
   FolderResponse,
   FolderCreateBody,
@@ -13,6 +13,7 @@ import type {
   UserBookmarksQuery,
   BookmarkParams,
   BookmarkUpdateBody,
+  ErrorResponse,
 } from "../types/bookmarks.types.js";
 import {
   toFolderResponse,
@@ -20,6 +21,8 @@ import {
 } from "../types/bookmarks.types.js";
 
 const TEST_USER_ID = "d604d922-de6a-4052-bc49-2ce8e2814e8d";
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env["DATABASE_URL"] }),
@@ -27,19 +30,47 @@ export const prisma = new PrismaClient({
 
 export const createFolder = async (
   req: Request<Record<string, never>, FolderResponse, FolderCreateBody>,
-  res: Response<FolderResponse>,
+  res: Response<FolderResponse | ErrorResponse>,
 ) => {
-  const { name } = req.body;
+  const name = req.body?.name;
 
-  const folder = await prisma.folder.create({
-    data: { name, userId: TEST_USER_ID },
-  });
+  // 422: name missing, empty, or not text
+  if (typeof name !== "string" || name.trim() === "") {
+    res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Some fields are invalid",
+        fields: { name: "Name is required" },
+      },
+    });
+    return;
+  }
 
-  res.status(201).json(toFolderResponse(folder));
+  try {
+    const folder = await prisma.folder.create({
+      data: { name, userId: TEST_USER_ID },
+    });
+    res.status(201).json(toFolderResponse(folder));
+  } catch (error) {
+    // 409: the user already has a folder with this name
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      res.status(409).json({
+        error: {
+          code: "DUPLICATE",
+          message: "You already have a folder with this name.",
+        },
+      });
+      return;
+    }
+    throw error;
+  }
 };
 
-export const listUsersFolders = async (
-  req: Request<Record<string, never>, FolderListResponse>,
+export const listUserFolders = async (
+  _req: Request<Record<string, never>, FolderListResponse>,
   res: Response<FolderListResponse>,
 ) => {
   const folders = await prisma.folder.findMany({
@@ -53,20 +84,80 @@ export const listUsersFolders = async (
 
 export const createBookmark = async (
   req: Request<Record<string, never>, BookmarkResponse, BookmarkCreateBody>,
-  res: Response<BookmarkResponse>,
+  res: Response<BookmarkResponse | ErrorResponse>,
 ) => {
-  const { folder_id, name, url } = req.body;
+  const { folder_id, name, url } = req.body ?? {};
+  const fields: Record<string, string> = {};
 
-  const bookmark = await prisma.bookmark.create({
-    data: {
-      folderId: folder_id,
-      name,
-      url,
-      userId: TEST_USER_ID,
-    },
+  if (typeof folder_id !== "string" || !UUID_REGEX.test(folder_id)) {
+    fields.folder_id = "Folder ID must be a valid id";
+  }
+
+  if (typeof name !== "string" || name.trim() === "") {
+    fields.name = "Name is required";
+  }
+
+  if (
+    typeof url !== "string" ||
+    !URL.canParse(url) ||
+    !url.startsWith("http")
+  ) {
+    fields.url = "URL must be a valid http or https link";
+  }
+
+  if (Object.keys(fields).length > 0) {
+    res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Some fields are invalid",
+        fields,
+      },
+    });
+    return;
+  }
+
+  // Folder lookup: Check if folder doesn't exist or belongs to another user */
+  const folder = await prisma.folder.findFirst({
+    where: { id: folder_id, userId: TEST_USER_ID },
   });
 
-  res.status(201).json(toBookmarkResponse(bookmark));
+  if (folder === null) {
+    res.status(404).json({
+      error: {
+        code: "NOT_FOUND",
+        message: "Folder not found or belongs to another user.",
+      },
+    });
+    return;
+  }
+
+  try {
+    const bookmark = await prisma.bookmark.create({
+      data: {
+        folderId: folder_id,
+        name,
+        url,
+        userId: TEST_USER_ID,
+      },
+    });
+
+    res.status(201).json(toBookmarkResponse(bookmark));
+  } catch (error) {
+    // 409: A bookmark with this name or url already exists in this folder
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      res.status(409).json({
+        error: {
+          code: "DUPLICATE",
+          message: "You already have a bookmark with this name or url.",
+        },
+      });
+      return;
+    }
+    throw error;
+  }
 };
 
 export const getBookmarks = async (
@@ -76,12 +167,55 @@ export const getBookmarks = async (
     unknown,
     FolderBookmarksQuery
   >,
-  res: Response<BookmarkListResponse>,
+  res: Response<BookmarkListResponse | ErrorResponse>,
 ) => {
-  const { folderId } = req.params;
-  const sort = req.query.sort;
+  const folderId = req.params.folderId;
+  const sort = req.query.sort ?? "newest";
   const limit = Number(req.query.limit ?? 20);
   const offset = Number(req.query.offset ?? 0);
+
+  const fields: Record<string, string> = {};
+
+  if (typeof folderId !== "string" || !UUID_REGEX.test(folderId)) {
+    fields.folderId = "Folder ID must be a valid id";
+  }
+
+  if (typeof sort !== "string" || (sort !== "oldest" && sort !== "newest")) {
+    fields.sort = "Sort value must be newest or oldest";
+  }
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    fields.limit = "Limit must be a whole number, between 1 and 100";
+  }
+
+  if (!Number.isInteger(offset) || offset < 0) {
+    fields.offset = "Offset must be a whole number, 0 or more";
+  }
+
+  if (Object.keys(fields).length > 0) {
+    res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Some fields are invalid",
+        fields,
+      },
+    });
+    return;
+  }
+
+  const folder = await prisma.folder.findFirst({
+    where: { id: folderId, userId: TEST_USER_ID },
+  });
+
+  if (folder === null) {
+    res.status(404).json({
+      error: {
+        code: "NOT_FOUND",
+        message: "Folder not found or belongs to another user.",
+      },
+    });
+    return;
+  }
 
   const bookmarks = await prisma.bookmark.findMany({
     where: { folderId, userId: TEST_USER_ID },
@@ -105,17 +239,43 @@ export const searchUsersBookmarks = async (
     unknown,
     UserBookmarksQuery
   >,
-  res: Response<BookmarkListResponse>,
+  res: Response<BookmarkListResponse | ErrorResponse>,
 ) => {
   const { name } = req.query;
   const limit = Number(req.query.limit ?? 20);
   const offset = Number(req.query.offset ?? 0);
+
+  const fields: Record<string, string> = {};
+
+  if (typeof name !== "string" || name.trim() === "") {
+    fields.name = "Name missing or empty.";
+  }
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    fields.limit = "Limit must be a whole number, between 1 and 100";
+  }
+
+  if (!Number.isInteger(offset) || offset < 0) {
+    fields.offset = "Offset must be a whole number, 0 or more";
+  }
+
+  if (Object.keys(fields).length > 0) {
+    res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Some fields are invalid",
+        fields,
+      },
+    });
+    return;
+  }
 
   const bookmarks = await prisma.bookmark.findMany({
     where: {
       userId: TEST_USER_ID,
       name: { contains: name, mode: "insensitive" },
     },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit,
     skip: offset,
   });
@@ -127,28 +287,134 @@ export const searchUsersBookmarks = async (
 
 export const editBookmark = async (
   req: Request<BookmarkParams, BookmarkResponse, BookmarkUpdateBody>,
-  res: Response<BookmarkResponse>,
+  res: Response<BookmarkResponse | ErrorResponse>,
 ) => {
   const { bookmarkId } = req.params;
-  const { folder_id, name, url } = req.body;
+  const { folder_id, name, url } = req.body ?? {};
+  const fields: Record<string, string> = {};
 
-  const bookmark = await prisma.bookmark.update({
-    where: { id: bookmarkId },
-    data: {
-      folderId: folder_id,
-      name,
-      url,
-    },
+  if (typeof bookmarkId !== "string" || !UUID_REGEX.test(bookmarkId)) {
+    fields.bookmarkId = "Bookmark ID must be a valid id";
+  }
+
+  if (
+    folder_id !== undefined &&
+    (typeof folder_id !== "string" || !UUID_REGEX.test(folder_id))
+  ) {
+    fields.folder_id = "Folder ID must be a valid id";
+  }
+
+  if (name !== undefined && (typeof name !== "string" || name.trim() === "")) {
+    fields.name = "Name can't be empty";
+  }
+
+  if (
+    url !== undefined &&
+    (typeof url !== "string" || !URL.canParse(url) || !url.startsWith("http"))
+  ) {
+    fields.url = "URL must be a valid http or https link";
+  }
+
+  if (Object.keys(fields).length > 0) {
+    res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Some fields are invalid",
+        fields,
+      },
+    });
+    return;
+  }
+
+  const bookmark = await prisma.bookmark.findFirst({
+    where: { id: bookmarkId, userId: TEST_USER_ID },
   });
 
-  res.json(toBookmarkResponse(bookmark));
+  if (bookmark === null) {
+    res.status(404).json({
+      error: {
+        code: "NOT_FOUND",
+        message: "Bookmark not found or belongs to another user.",
+      },
+    });
+    return;
+  }
+
+  if (folder_id !== undefined) {
+    const folder = await prisma.folder.findFirst({
+      where: { id: folder_id, userId: TEST_USER_ID },
+    });
+    if (folder === null) {
+      res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Folder not found or belongs to another user.",
+        },
+      });
+      return;
+    }
+  }
+
+  try {
+    const updatedBookmark = await prisma.bookmark.update({
+      where: { id: bookmarkId },
+      data: {
+        folderId: folder_id,
+        name,
+        url,
+      },
+    });
+
+    res.json(toBookmarkResponse(updatedBookmark));
+  } catch (error) {
+    // 409: A bookmark with this name or url already exists in this folder
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      res.status(409).json({
+        error: {
+          code: "DUPLICATE",
+          message:
+            "A bookmark with this name or url already exists in this folder.",
+        },
+      });
+      return;
+    }
+    throw error;
+  }
 };
 
 export const deleteBookmark = async (
   req: Request<BookmarkParams>,
-  res: Response,
+  res: Response<ErrorResponse>,
 ) => {
   const { bookmarkId } = req.params;
+
+  if (typeof bookmarkId !== "string" || !UUID_REGEX.test(bookmarkId)) {
+    res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Some fields are invalid",
+        fields: { bookmarkId: "Bookmark ID must be a valid id" },
+      },
+    });
+    return;
+  }
+
+  const bookmark = await prisma.bookmark.findFirst({
+    where: { id: bookmarkId, userId: TEST_USER_ID },
+  });
+
+  if (bookmark === null) {
+    res.status(404).json({
+      error: {
+        code: "NOT_FOUND",
+        message: "Bookmark not found or belongs to another user.",
+      },
+    });
+    return;
+  }
 
   await prisma.bookmark.delete({ where: { id: bookmarkId } });
 

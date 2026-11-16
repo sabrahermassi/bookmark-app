@@ -177,17 +177,18 @@ Get a folder's bookmarks, sorted and paginated.
 
 **Errors**
 
-| Status | When                                                                         |
-| ------ | ---------------------------------------------------------------------------- |
-| 401    | Missing or invalid token                                                     |
-| 404    | Folder doesn't exist or belongs to another user                              |
-| 422    | sort not `newest`/`oldest`; limit not 1–100; offset negative or not a number |
+| Status | When                                                                                                  |
+| ------ | ----------------------------------------------------------------------------------------------------- |
+| 401    | Missing or invalid token                                                                              |
+| 404    | Folder doesn't exist or belongs to another user                                                       |
+| 422    | folderId not a valid id; sort not `newest`/`oldest`; limit not 1–100; offset negative or not a number |
 
 ---
 
 ## GET /bookmarks?name=…
 
 Search the user's bookmarks by name.
+Results are sorted newest first (by created_at, then id).
 
 **Request**
 
@@ -258,12 +259,12 @@ Edit a bookmark. Send only the fields that change.
 
 **Errors**
 
-| Status | When                                                           |
-| ------ | -------------------------------------------------------------- |
-| 401    | Missing or invalid token                                       |
-| 404    | Folder or bookmark doesn't exist or belongs to another user    |
-| 409    | A bookmark with this name or url already exists in this folder |
-| 422    | A sent field is empty or not text; url not a valid URL         |
+| Status | When                                                                                           |
+| ------ | ---------------------------------------------------------------------------------------------- |
+| 401    | Missing or invalid token                                                                       |
+| 404    | Folder or bookmark doesn't exist or belongs to another user                                    |
+| 409    | A bookmark with this name or url already exists in this folder                                 |
+| 422    | bookmarkId or folder_id not a valid id; a sent field is empty or not text; url not a valid URL |
 
 ---
 
@@ -285,3 +286,4 @@ No body.
 | ------ | ------------------------------------------------- |
 | 401    | Missing or invalid token                          |
 | 404    | Bookmark doesn't exist or belongs to another user |
+| 422    | bookmarkId not a valid id                         |

@@ -52,6 +52,14 @@ export type BookmarkParams = {
 
 export type BookmarkUpdateBody = Partial<BookmarkCreateBody>;
 
+export type ErrorResponse = {
+  error: {
+    code: string;
+    message: string;
+    fields?: Record<string, string>;
+  };
+};
+
 export function toBookmarkResponse(bookmark: Bookmark): BookmarkResponse {
   return {
     id: bookmark.id,

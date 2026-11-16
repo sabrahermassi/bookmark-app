@@ -2,7 +2,7 @@ import express from "express";
 import type { Router } from "express";
 import {
   createFolder,
-  listUsersFolders,
+  listUserFolders,
   createBookmark,
   getBookmarks,
   searchUsersBookmarks,
@@ -16,7 +16,7 @@ export const bookmarksRouter: Router = express.Router();
 bookmarksRouter.post("/folders", createFolder);
 
 // GET /folders
-bookmarksRouter.get("/folders", listUsersFolders);
+bookmarksRouter.get("/folders", listUserFolders);
 
 // POST /bookmarks
 bookmarksRouter.post("/bookmarks", createBookmark);
