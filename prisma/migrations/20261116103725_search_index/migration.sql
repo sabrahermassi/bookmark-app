@@ -1,0 +1,1 @@
+CREATE INDEX bookmarks_name_search_idx ON bookmarks USING GIN (to_tsvector('simple', name));

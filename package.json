@@ -24,7 +24,8 @@
     "dev": "concurrently \"tsc --noEmit --watch\" \"tsx watch --env-file=.env apps/api/src/index.ts\" \"vite apps/web\"",
     "typecheck": "tsc --noEmit && tsc -b apps/web",
     "start": "tsc && node --env-file=.env dist/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:seed": "docker compose exec -T db psql -v ON_ERROR_STOP=1 -U bookmarks -d bookmarks < prisma/seed.sql"
   },
   "devDependencies": {
     "@tsconfig/node-lts": "^26.0.1",

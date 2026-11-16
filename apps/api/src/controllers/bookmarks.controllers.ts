@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, Prisma } from "../generated/prisma/client.js";
+import { PrismaClient, Prisma, Bookmark } from "../generated/prisma/client.js";
 import type {
   FolderResponse,
   FolderCreateBody,
@@ -215,6 +215,8 @@ export const getBookmarks = async (
   });
 };
 
+// GET /bookmarks?name= : full-text search on bookmark names.
+// Uses raw SQL so Postgres can use the GIN index bookmarks_name_search_index.
 export const searchUsersBookmarks = async (
   req: Request<
     Record<string, never>,
@@ -251,15 +253,14 @@ export const searchUsersBookmarks = async (
     );
   }
 
-  const bookmarks = await prisma.bookmark.findMany({
-    where: {
-      userId: TEST_USER_ID,
-      name: { contains: name, mode: "insensitive" },
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    take: limit,
-    skip: offset,
-  });
+  const bookmarks = await prisma.$queryRaw<Bookmark[]>`
+  SELECT id, folder_id AS "folderId", user_id AS "userId", name, url, created_at AS "createdAt"
+  FROM bookmarks
+  WHERE user_id = ${TEST_USER_ID}::uuid
+    AND to_tsvector('simple', name) @@ plainto_tsquery('simple', ${name})
+  ORDER BY created_at DESC, id DESC
+  LIMIT ${limit} OFFSET ${offset}
+`;
 
   res.json({
     bookmarks: bookmarks.map((bookmark) => toBookmarkResponse(bookmark)),
