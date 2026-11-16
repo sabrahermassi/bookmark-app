@@ -19,6 +19,7 @@ import {
   toBookmarkResponse,
 } from "../types/bookmarks.types.js";
 import { AppError } from "../middleware/error.middleware.js";
+import { createHash } from "node:crypto";
 
 const TEST_USER_ID = "d604d922-de6a-4052-bc49-2ce8e2814e8d";
 const UUID_REGEX =
@@ -36,7 +37,7 @@ export const createFolder = async (
 
   // 422: name missing, empty, or not text
   if (typeof name !== "string" || name.trim() === "") {
-    throw new AppError(422, "VALIDATION_ERROR", "Some fields are invalid", {
+    throw new AppError(422, "VALIDATION_ERROR", "Some fields are invalid.", {
       name: "Name is required",
     });
   }
@@ -80,6 +81,10 @@ export const createBookmark = async (
   res: Response<BookmarkResponse>,
 ) => {
   const { folder_id, name, url } = req.body ?? {};
+  const idempotencyKey = req.get("Idempotency-Key"); // undefined if not sent
+  const requestHash = createHash("sha256")
+    .update(JSON.stringify(req.body))
+    .digest("hex");
   const fields: Record<string, string> = {};
 
   if (typeof folder_id !== "string" || !UUID_REGEX.test(folder_id)) {
@@ -102,9 +107,28 @@ export const createBookmark = async (
     throw new AppError(
       422,
       "VALIDATION_ERROR",
-      "Some fields are invalid",
+      "Some fields are invalid.",
       fields,
     );
+  }
+
+  if (idempotencyKey !== undefined) {
+    const saved = await prisma.idempotencyKey.findUnique({
+      where: { userId_key: { userId: TEST_USER_ID, key: idempotencyKey } },
+    });
+    if (saved !== null) {
+      if (saved.requestHash !== requestHash) {
+        throw new AppError(
+          422,
+          "IDEMPOTENCY_KEY_REUSED",
+          "This key was already used with a different body.",
+        );
+      }
+      res
+        .status(saved.responseStatus)
+        .json(saved.responseBody as unknown as BookmarkResponse);
+      return;
+    }
   }
 
   // Folder lookup: Check if folder doesn't exist or belongs to another user */
@@ -121,22 +145,47 @@ export const createBookmark = async (
   }
 
   try {
-    const bookmark = await prisma.bookmark.create({
-      data: {
-        folderId: folder_id,
-        name,
-        url,
-        userId: TEST_USER_ID,
-      },
+    const bookmark = await prisma.$transaction(async (tx) => {
+      const created = await tx.bookmark.create({
+        data: { folderId: folder_id, name, url, userId: TEST_USER_ID },
+      });
+      if (idempotencyKey !== undefined) {
+        const response = toBookmarkResponse(created);
+        await tx.idempotencyKey.create({
+          data: {
+            userId: TEST_USER_ID,
+            key: idempotencyKey,
+            requestHash,
+            responseStatus: 201,
+            responseBody: {
+              ...response,
+              created_at: response.created_at.toISOString(),
+            },
+          },
+        });
+      }
+      return created;
     });
-
     res.status(201).json(toBookmarkResponse(bookmark));
   } catch (error) {
-    // 409: A bookmark with this name or url already exists in this folder
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      // Two requests with the same key at the same moment: the other one won, so send its response
+      if (idempotencyKey !== undefined) {
+        const saved = await prisma.idempotencyKey.findUnique({
+          where: { userId_key: { userId: TEST_USER_ID, key: idempotencyKey } },
+        });
+        if (saved !== null) {
+          res
+            .status(saved.responseStatus)
+            .json(saved.responseBody as unknown as BookmarkResponse);
+          return;
+        }
+      }
+
+      // 409: A bookmark with this name or url already exists in this folder
       throw new AppError(
         409,
         "DUPLICATE",
@@ -183,7 +232,7 @@ export const getBookmarks = async (
     throw new AppError(
       422,
       "VALIDATION_ERROR",
-      "Some fields are invalid",
+      "Some fields are invalid.",
       fields,
     );
   }
@@ -248,7 +297,7 @@ export const searchUsersBookmarks = async (
     throw new AppError(
       422,
       "VALIDATION_ERROR",
-      "Some fields are invalid",
+      "Some fields are invalid.",
       fields,
     );
   }
@@ -303,7 +352,7 @@ export const editBookmark = async (
     throw new AppError(
       422,
       "VALIDATION_ERROR",
-      "Some fields are invalid",
+      "Some fields are invalid.",
       fields,
     );
   }
@@ -367,7 +416,7 @@ export const deleteBookmark = async (
   const { bookmarkId } = req.params;
 
   if (typeof bookmarkId !== "string" || !UUID_REGEX.test(bookmarkId)) {
-    throw new AppError(422, "VALIDATION_ERROR", "Some fields are invalid", {
+    throw new AppError(422, "VALIDATION_ERROR", "Some fields are invalid.", {
       bookmarkId: "Bookmark ID must be a valid id",
     });
   }
