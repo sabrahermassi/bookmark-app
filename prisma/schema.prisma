@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id              String   @id @default(uuid()) @db.Uuid
+  email           String   @unique
+  passwordHash    String   @map("password_hash")
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  folders   Folder[]
-  bookmarks Bookmark[]
+  folders         Folder[]
+  bookmarks       Bookmark[]
+  idempotencyKeys IdempotencyKey[]
 
   @@map("users")
 }
@@ -47,4 +48,19 @@ model Bookmark {
   @@unique([folderId, url])
   @@index([folderId, createdAt, id])
   @@map("bookmarks")
+}
+
+model IdempotencyKey {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  key            String
+  requestHash    String   @map("request_hash")
+  responseStatus Int      @map("response_status")
+  responseBody   Json     @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("idempotency_keys")
 }

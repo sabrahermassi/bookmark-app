@@ -47,3 +47,19 @@
 | ----------- | --------------------- | ---------- | --------- |
 | Search      | GIN (full-text)       | 2.108 ms   | 75.581 ms |
 | Folder list | B-tree (folder, date) | 0.23 ms    | 24 ms     |
+
+### idempotency_keys
+
+| Column          | Type      | Rules                                     |
+| --------------- | --------- | ----------------------------------------- |
+| id              | uuid      | Primary key                               |
+| user_id         | uuid      | Required, foreign key → users.id, cascade |
+| key             | text      | Required, the Idempotency-Key header      |
+| request_hash    | text      | Required, SHA-256 of the request body     |
+| response_status | integer   | Required, e.g. 201                        |
+| response_body   | jsonb     | Required, the JSON that was sent          |
+| created_at      | timestamp | Required, defaults to now()               |
+
+**Unique (user_id, key):** one saved response per key, per user.
+
+**Kept for 24 hours**, then deleted.
