@@ -202,3 +202,114 @@ select {
 .bookmark-form .field p {
   flex-basis: auto;
 }
+
+/* Bookmark rows: name on the left, actions on the right */
+.main li.bookmark-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.row-actions button {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+button.danger:hover {
+  background: #a93226;
+}
+
+.main li .row-error {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.load-more {
+  display: block;
+  margin: 4px auto 0;
+}
+
+/* Edit dialog */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  background: var(--panel);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.dialog h3 {
+  margin: 0 0 14px;
+  font-size: 17px;
+}
+
+.edit-form {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin: 0;
+}
+
+.edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.edit-form input,
+.edit-form select {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.edit-form p {
+  flex-basis: auto;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+form button.secondary {
+  background: var(--panel);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+form button.secondary:hover {
+  background: var(--bg);
+}

@@ -62,6 +62,7 @@ export function App() {
           <BookmarkList
             key={selectedFolderId}
             folderId={selectedFolderId}
+            folders={folders.status === "ready" ? folders.data : []}
             bookmarksVersion={bookmarksVersion}
           />
         ) : (
