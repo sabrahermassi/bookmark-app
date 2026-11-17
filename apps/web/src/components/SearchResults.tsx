@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import type { Bookmark, Folder, LoadState } from "../types";
 import { api } from "../api";
 
+const PAGE_SIZE = 20;
+
 type SearchResultsProps = {
   text: string; // already debounced by App
   folders: Folder[];
@@ -14,6 +16,11 @@ export function SearchResults(props: SearchResultsProps) {
   });
   const [reload, setReload] = useState(0);
 
+  // Paging
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+
   useEffect(() => {
     // Typing has started but not paused yet: nothing to search for
     if (props.text.trim() === "") return;
@@ -24,9 +31,12 @@ export function SearchResults(props: SearchResultsProps) {
       try {
         const name = encodeURIComponent(props.text.trim());
         const body = await api<{ bookmarks: Bookmark[] }>(
-          `/bookmarks?name=${name}`,
+          `/bookmarks?name=${name}&limit=${PAGE_SIZE}&offset=0`,
         );
-        if (active) setResults({ status: "ready", data: body.bookmarks });
+        if (active) {
+          setResults({ status: "ready", data: body.bookmarks });
+          setHasMore(body.bookmarks.length === PAGE_SIZE);
+        }
       } catch {
         if (active) setResults({ status: "error", message: "Search failed." });
       }
@@ -37,6 +47,32 @@ export function SearchResults(props: SearchResultsProps) {
       active = false;
     };
   }, [props.text, reload]);
+
+  // Next page of matches, starting after the ones we already have
+  async function handleLoadMore() {
+    if (results.status !== "ready") return;
+    const offset = results.data.length;
+
+    setLoadingMore(true);
+    setMoreError(null);
+    try {
+      const name = encodeURIComponent(props.text.trim());
+      const body = await api<{ bookmarks: Bookmark[] }>(
+        `/bookmarks?name=${name}&limit=${PAGE_SIZE}&offset=${offset}`,
+      );
+      const page = body.bookmarks;
+      setResults((prev) =>
+        prev.status === "ready"
+          ? { status: "ready", data: [...prev.data, ...page] }
+          : prev,
+      );
+      setHasMore(page.length === PAGE_SIZE);
+    } catch {
+      setMoreError("Could not load more results.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   function folderName(folderId: string) {
     const folder = props.folders.find((f) => f.id === folderId);
@@ -67,20 +103,33 @@ export function SearchResults(props: SearchResultsProps) {
     return <p>No bookmarks match “{props.text.trim()}”.</p>;
 
   return (
-    <ul>
-      {results.data.map((bookmark) => (
-        <li key={bookmark.id} className="bookmark-row">
-          <a href={bookmark.url} target="_blank" rel="noopener noreferrer">
-            {bookmark.name}
-          </a>
-          <button
-            className="folder-tag"
-            onClick={() => props.onOpenFolder(bookmark.folder_id)}
-          >
-            {folderName(bookmark.folder_id)}
-          </button>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul>
+        {results.data.map((bookmark) => (
+          <li key={bookmark.id} className="bookmark-row">
+            <a href={bookmark.url} target="_blank" rel="noopener noreferrer">
+              {bookmark.name}
+            </a>
+            <button
+              className="folder-tag"
+              onClick={() => props.onOpenFolder(bookmark.folder_id)}
+            >
+              {folderName(bookmark.folder_id)}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {hasMore && (
+        <button
+          className="load-more"
+          disabled={loadingMore}
+          onClick={handleLoadMore}
+        >
+          {loadingMore ? "Loading…" : "Load more"}
+        </button>
+      )}
+      {moreError && <p>{moreError}</p>}
+    </>
   );
 }

@@ -68,6 +68,7 @@ export function App() {
         <SearchBox text={searchText} onChange={setSearchText} />
         {searchText.trim() !== "" ? (
           <SearchResults
+            key={debouncedText}
             text={debouncedText}
             folders={folderList}
             onOpenFolder={handleSelectFolder}
