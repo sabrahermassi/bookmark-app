@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Bookmark, Folder, LoadState } from "../types";
 import { api, ApiError } from "../api";
 import { EditBookmarkDialog } from "./EditBookmarkDialog";
@@ -17,6 +17,14 @@ export function BookmarkList(props: BookmarkListProps) {
     status: "loading",
   });
   const [reload, setReload] = useState(0);
+  // Which version of the list is on screen. It changes on every refresh
+  // (after Retry, add, edit, delete), so a "Load more" answer that belongs
+  // to an older version can be recognised and thrown away.
+  const generation = useRef(0);
+  const listKey = `${reload}-${props.bookmarksVersion}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  // True while a refresh is running and the old rows are still shown
+  const refreshing = loadedKey !== listKey;
 
   // Paging
   const [hasMore, setHasMore] = useState(false);
@@ -37,6 +45,10 @@ export function BookmarkList(props: BookmarkListProps) {
   useEffect(() => {
     let active = true;
 
+    // A refresh starts: any "Load more" still in flight is now out of date
+    generation.current += 1;
+    const key = `${reload}-${props.bookmarksVersion}`;
+
     async function load() {
       try {
         const body = await api<{ bookmarks: Bookmark[] }>(
@@ -44,6 +56,7 @@ export function BookmarkList(props: BookmarkListProps) {
         );
         if (active) {
           setBookmarks({ status: "ready", data: body.bookmarks });
+          setLoadedKey(key);
           setHasMore(body.bookmarks.length === PAGE_SIZE);
           setMoreError(null);
         }
@@ -69,8 +82,9 @@ export function BookmarkList(props: BookmarkListProps) {
 
   // Next page: ask for 20 more, starting after the rows we already have
   async function handleLoadMore() {
-    if (bookmarks.status !== "ready") return;
+    if (bookmarks.status !== "ready" || refreshing) return;
     const offset = bookmarks.data.length;
+    const gen = generation.current;
 
     setLoadingMore(true);
     setMoreError(null);
@@ -78,6 +92,8 @@ export function BookmarkList(props: BookmarkListProps) {
       const body = await api<{ bookmarks: Bookmark[] }>(
         `/folders/${props.folderId}/bookmarks?limit=${PAGE_SIZE}&offset=${offset}`,
       );
+      // The list was refreshed while we waited: this page no longer fits
+      if (gen !== generation.current) return;
       const page = body.bookmarks;
       setBookmarks((prev) =>
         prev.status === "ready"
@@ -86,7 +102,8 @@ export function BookmarkList(props: BookmarkListProps) {
       );
       setHasMore(page.length === PAGE_SIZE);
     } catch {
-      setMoreError("Could not load more bookmarks.");
+      if (gen === generation.current)
+        setMoreError("Could not load more bookmarks.");
     } finally {
       setLoadingMore(false);
     }
@@ -188,6 +205,7 @@ export function BookmarkList(props: BookmarkListProps) {
 
       {editing && (
         <EditBookmarkDialog
+          key={editing.id}
           bookmark={editing}
           folders={props.folders}
           onSaved={handleSaved}

@@ -1,4 +1,4 @@
-import { useState, type SubmitEvent } from "react";
+import { useState, useEffect, useRef, type SubmitEvent } from "react";
 import type { Bookmark, Folder } from "../types";
 import { api, ApiError } from "../api";
 
@@ -16,6 +16,20 @@ export function EditBookmarkDialog(props: EditBookmarkDialogProps) {
   const [url, setUrl] = useState(props.bookmark.url);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // Open as a real modal: the browser moves focus inside, keeps Tab inside,
+  // and makes the rest of the page unclickable. On close, focus goes back
+  // to the button that opened the dialog.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const opener = document.activeElement as HTMLElement | null;
+    dialog?.showModal();
+    return () => {
+      dialog?.close();
+      opener?.focus();
+    };
+  }, []);
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -72,68 +86,70 @@ export function EditBookmarkDialog(props: EditBookmarkDialogProps) {
   }
 
   return (
-    <div className="overlay">
-      <div
-        className="dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Edit bookmark"
-      >
-        <h3>Edit bookmark</h3>
-        <form className="edit-form" onSubmit={handleSubmit}>
-          <label>
-            Folder
-            <select
-              value={folderId}
-              disabled={submitting}
-              onChange={(e) => setFolderId(e.target.value)}
-            >
-              {props.folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {errors.folder_id && <p>{errors.folder_id}</p>}
+    <dialog
+      ref={dialogRef}
+      className="dialog"
+      aria-label="Edit bookmark"
+      onCancel={(e) => {
+        // Escape: close, unless a save is still running
+        e.preventDefault();
+        if (!submitting) props.onClose();
+      }}
+    >
+      <h3>Edit bookmark</h3>
+      <form className="edit-form" onSubmit={handleSubmit}>
+        <label>
+          Folder
+          <select
+            value={folderId}
+            disabled={submitting}
+            onChange={(e) => setFolderId(e.target.value)}
+          >
+            {props.folders.map((folder) => (
+              <option key={folder.id} value={folder.id}>
+                {folder.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {errors.folder_id && <p>{errors.folder_id}</p>}
 
-          <label>
-            Name
-            <input
-              value={name}
-              disabled={submitting}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          {errors.name && <p>{errors.name}</p>}
+        <label>
+          Name
+          <input
+            value={name}
+            disabled={submitting}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        {errors.name && <p>{errors.name}</p>}
 
-          <label>
-            URL
-            <input
-              value={url}
-              disabled={submitting}
-              onChange={(e) => setUrl(e.target.value)}
-            />
-          </label>
-          {errors.url && <p>{errors.url}</p>}
+        <label>
+          URL
+          <input
+            value={url}
+            disabled={submitting}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+        </label>
+        {errors.url && <p>{errors.url}</p>}
 
-          {errors.form && <p>{errors.form}</p>}
+        {errors.form && <p>{errors.form}</p>}
 
-          <div className="dialog-actions">
-            <button
-              type="button"
-              className="secondary"
-              disabled={submitting}
-              onClick={props.onClose}
-            >
-              Cancel
-            </button>
-            <button disabled={submitting}>
-              {submitting ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="dialog-actions">
+          <button
+            type="button"
+            className="secondary"
+            disabled={submitting}
+            onClick={props.onClose}
+          >
+            Cancel
+          </button>
+          <button disabled={submitting}>
+            {submitting ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </form>
+    </dialog>
   );
 }
