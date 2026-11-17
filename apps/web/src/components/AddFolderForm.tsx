@@ -1,4 +1,6 @@
 import { useState, type SubmitEvent } from "react";
+import type { Folder } from "../types";
+import { api, ApiError } from "../api";
 
 type AddFolderFormProps = {
   onCreated: () => void;
@@ -24,27 +26,20 @@ export function AddFolderForm(props: AddFolderFormProps) {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/folders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-
-      if (res.ok) {
-        setName("");
-        setErrors({});
-        props.onCreated();
-        return;
-      }
-
-      const body = await res.json();
-      if (body.error.fields) {
-        setErrors(body.error.fields);
+      await api<Folder>("/folders", { method: "POST", body: { name } });
+      setName("");
+      setErrors({});
+      props.onCreated();
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        setErrors({ form: "Something went wrong. Try again." });
+      } else if (err.fields) {
+        setErrors(err.fields);
+      } else if (err.status === 409) {
+        setErrors({ name: err.message });
       } else {
-        setErrors({ name: body.error.message });
+        setErrors({ form: err.message });
       }
-    } catch {
-      setErrors({ form: "Could not reach the server. Try again." });
     } finally {
       setSubmitting(false);
     }

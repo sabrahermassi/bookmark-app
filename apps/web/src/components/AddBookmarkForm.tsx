@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from "react";
-import type { Folder } from "../types";
+import type { Bookmark, Folder } from "../types";
+import { api, ApiError } from "../api";
 
 type AddBookmarkFormProps = {
   folders: Folder[];
@@ -38,30 +39,26 @@ export function AddBookmarkForm(props: AddBookmarkFormProps) {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/bookmarks", {
+      await api<Bookmark>("/bookmarks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folder_id: folderId, name, url }),
+        body: { folder_id: folderId, name, url },
       });
-
-      if (res.ok) {
-        setName("");
-        setUrl("");
-        setErrors({});
-        props.onCreated();
-        return;
-      }
-
-      const body = await res.json();
-      if (body.error.fields) {
-        setErrors(body.error.fields);
-      } else if (res.status === 404) {
-        setErrors({ folder_id: body.error.message });
+      setName("");
+      setUrl("");
+      setErrors({});
+      props.onCreated();
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        setErrors({ form: "Something went wrong. Try again." });
+      } else if (err.fields) {
+        setErrors(err.fields);
+      } else if (err.status === 404) {
+        setErrors({ folder_id: err.message });
+      } else if (err.status === 409) {
+        setErrors({ name: err.message });
       } else {
-        setErrors({ name: body.error.message });
+        setErrors({ form: err.message });
       }
-    } catch {
-      setErrors({ form: "Could not reach the server. Try again." });
     } finally {
       setSubmitting(false);
     }
