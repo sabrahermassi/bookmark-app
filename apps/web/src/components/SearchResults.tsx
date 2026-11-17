@@ -76,7 +76,7 @@ export function SearchResults(props: SearchResultsProps) {
 
   function folderName(folderId: string) {
     const folder = props.folders.find((f) => f.id === folderId);
-    return folder ? folder.name : "";
+    return folder ? folder.name : "Open folder";
   }
 
   function handleRetry() {

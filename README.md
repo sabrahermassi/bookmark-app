@@ -7,7 +7,7 @@ A bookmarks manager built to practise production backend patterns: full-text sea
 - **Design first.** Requirements, capacity estimates, API contract and data model were written before any code: [design](docs/design.md), [API](docs/api.md), [data model](docs/data-model.md).
 - **Full-text search on a GIN index.** Search by name drops from about 75 ms to about 2 ms on 100,000 bookmarks, measured with `EXPLAIN ANALYZE`.
 - **Idempotent writes.** `POST /bookmarks` accepts an `Idempotency-Key`. A retry replays the saved response instead of creating a duplicate, a reused key with a different body is rejected, and two parallel retries are handled safely.
-- **One error format everywhere.** A central error handler returns `{ error: { code, message, fields } }` for validation errors, duplicates, unknown routes, broken JSON and server errors.
+- **One error format everywhere.** A central error handler returns `{ error: { code, message } }` for validation errors, duplicates, unknown routes, broken JSON and server errors. Validation errors also include `fields`, which lists each invalid field.
 - **Input validation that matches the contract.** Every field is checked against `docs/api.md`, with one 422 that lists every invalid field.
 - **Safe raw SQL.** The search query uses parameterized `$queryRaw`, never string concatenation.
 - **CI on every pull request.** Type check, lint, and tests against a real Postgres, plus AI code review.
@@ -82,7 +82,7 @@ erDiagram
     text request_hash "SHA-256 of the body"
     int response_status
     jsonb response_body
-    timestamp created_at "kept 24 hours"
+    timestamp created_at "no purge yet; 24-hour purge planned"
   }
 ```
 
@@ -354,6 +354,6 @@ npm run db:seed
 npm run dev
 ```
 
-`npm run db:seed` is optional: it adds a test user and 100,000 bookmarks.
+`npm run db:seed` is required until authentication exists: it creates the test user that the API uses and adds 100,000 bookmarks.
 
 3. Open the app at http://localhost:5173. The API runs on http://localhost:3000/api.
