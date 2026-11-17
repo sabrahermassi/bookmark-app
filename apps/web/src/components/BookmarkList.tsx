@@ -3,6 +3,7 @@ import type { Bookmark, LoadState } from "../types";
 
 type BookmarkListProps = {
   folderId: string;
+  bookmarksVersion: number;
 };
 
 export function BookmarkList(props: BookmarkListProps) {
@@ -33,7 +34,7 @@ export function BookmarkList(props: BookmarkListProps) {
     return () => {
       active = false;
     };
-  }, [props.folderId, reload]);
+  }, [props.folderId, reload, props.bookmarksVersion]);
 
   function handleRetry() {
     setBookmarks({ status: "loading" });

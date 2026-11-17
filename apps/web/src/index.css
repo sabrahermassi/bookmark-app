@@ -1,176 +1,26 @@
-:root {
-  --bg: #f6f7f9;
-  --panel: #ffffff;
-  --text: #1f2933;
-  --muted: #6b7280;
-  --border: #e3e6ea;
-  --accent: #2f6fed;
-  --accent-soft: #e8efff;
-  --danger: #c0392b;
+select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  background: white;
 }
 
-* {
-  box-sizing: border-box;
+.bookmark-form {
+  align-items: flex-start;
+  margin-bottom: 24px;
 }
 
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  font-size: 15px;
-  color: var(--text);
-  background: var(--bg);
-}
-
-.app {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  min-height: 100vh;
-}
-
-.sidebar {
-  padding: 20px 16px;
-  background: var(--panel);
-  border-right: 1px solid var(--border);
-}
-
-.sidebar h1 {
-  margin: 0 0 16px;
-  font-size: 18px;
-}
-
-.main {
-  padding: 28px 32px;
-}
-
-.main h2 {
-  margin: 0 0 16px;
-  font-size: 16px;
-  color: var(--muted);
-  font-weight: 500;
-}
-
-ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/* Add folder form */
-form {
+.bookmark-form .field {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-input {
+.bookmark-form .field.grow {
   flex: 1;
-  min-width: 0;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
 }
 
-input:focus {
-  outline: 2px solid var(--accent-soft);
-  border-color: var(--accent);
-}
-
-button {
-  padding: 7px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  font: inherit;
-  cursor: pointer;
-}
-
-button:hover {
-  background: var(--bg);
-}
-
-form button {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
-}
-
-form button:hover {
-  background: #255bd0;
-}
-
-form p {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 13px;
-  color: var(--danger);
-}
-
-/* Folder list */
-.sidebar li button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  padding: 7px 10px;
-  margin-bottom: 2px;
-}
-
-.sidebar li button:hover {
-  background: var(--bg);
-}
-
-.sidebar li button.selected {
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-/* Bookmark list */
-.main li {
-  padding: 12px 14px;
-  margin-bottom: 8px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.main li a {
-  color: var(--text);
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.main li a:hover {
-  color: var(--accent);
-}
-
-/* Loading */
-.skeleton {
-  height: 32px;
-  margin-bottom: 6px;
-  border-radius: 6px;
-  background: #e5e7eb;
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-.main .skeleton {
-  height: 46px;
-  border: none;
-  padding: 0;
-  background: #e5e7eb;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* Empty and error messages */
-.sidebar > p,
-.main > p {
-  color: var(--muted);
+.bookmark-form .field p {
+  flex-basis: auto;
 }
