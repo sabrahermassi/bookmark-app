@@ -3,6 +3,7 @@ import type { Folder, LoadState } from "../types";
 
 type FolderListProps = {
   onSelect: (id: string) => void;
+  foldersVersion: number;
 };
 
 export function FolderList(props: FolderListProps) {
@@ -30,7 +31,7 @@ export function FolderList(props: FolderListProps) {
     return () => {
       active = false;
     };
-  }, [reload]);
+  }, [reload, props.foldersVersion]);
 
   function handleRetry() {
     setFolders({ status: "loading" });
