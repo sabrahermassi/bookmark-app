@@ -7,6 +7,7 @@ import { AddFolderForm } from "./components/AddFolderForm";
 import { AddBookmarkForm } from "./components/AddBookmarkForm";
 import { SearchBox } from "./components/SearchBox";
 import { SearchResults } from "./components/SearchResults";
+import { useDebounced } from "./useDebounced";
 
 export function App() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -17,6 +18,8 @@ export function App() {
   });
   const [reload, setReload] = useState(0);
   const [searchText, setSearchText] = useState("");
+  // The search text, but only once typing has paused for 300 ms
+  const debouncedText = useDebounced(searchText, 300);
 
   useEffect(() => {
     let active = true;
@@ -65,7 +68,7 @@ export function App() {
         <SearchBox text={searchText} onChange={setSearchText} />
         {searchText.trim() !== "" ? (
           <SearchResults
-            text={searchText}
+            text={debouncedText}
             folders={folderList}
             onOpenFolder={handleSelectFolder}
           />

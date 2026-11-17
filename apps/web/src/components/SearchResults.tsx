@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import type { Bookmark, Folder, LoadState } from "../types";
 import { api } from "../api";
 
-const DEBOUNCE_MS = 300;
-
 type SearchResultsProps = {
-  text: string;
+  text: string; // already debounced by App
   folders: Folder[];
   onOpenFolder: (folderId: string) => void;
 };
@@ -17,12 +15,12 @@ export function SearchResults(props: SearchResultsProps) {
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    // Typing has started but not paused yet: nothing to search for
+    if (props.text.trim() === "") return;
+
     let active = true;
 
-    // Wait until typing stops. Every new keystroke runs the cleanup below,
-    // which cancels this timer, so only the last one fires.
-    const timer = setTimeout(async () => {
-      setResults({ status: "loading" });
+    async function load() {
       try {
         const name = encodeURIComponent(props.text.trim());
         const body = await api<{ bookmarks: Bookmark[] }>(
@@ -32,17 +30,22 @@ export function SearchResults(props: SearchResultsProps) {
       } catch {
         if (active) setResults({ status: "error", message: "Search failed." });
       }
-    }, DEBOUNCE_MS);
+    }
+    load();
 
     return () => {
       active = false;
-      clearTimeout(timer);
     };
   }, [props.text, reload]);
 
   function folderName(folderId: string) {
     const folder = props.folders.find((f) => f.id === folderId);
     return folder ? folder.name : "";
+  }
+
+  function handleRetry() {
+    setResults({ status: "loading" });
+    setReload((r) => r + 1);
   }
 
   if (results.status === "loading")
@@ -57,7 +60,7 @@ export function SearchResults(props: SearchResultsProps) {
     return (
       <>
         <p>{results.message}</p>
-        <button onClick={() => setReload((r) => r + 1)}>Retry</button>
+        <button onClick={handleRetry}>Retry</button>
       </>
     );
   if (results.data.length === 0)
