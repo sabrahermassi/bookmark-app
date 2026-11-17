@@ -1,0 +1,38 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 24px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li button {
+  padding: 6px 14px;
+  margin-bottom: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+li button:hover {
+  background: #eee;
+}
+
+.skeleton {
+  width: 160px;
+  height: 32px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: #e5e5e5;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
