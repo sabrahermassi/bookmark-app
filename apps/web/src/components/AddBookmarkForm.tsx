@@ -12,6 +12,7 @@ export function AddBookmarkForm(props: AddBookmarkFormProps) {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -35,34 +36,46 @@ export function AddBookmarkForm(props: AddBookmarkFormProps) {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    const res = await fetch("/api/bookmarks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folder_id: folderId, name, url }),
-    });
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/bookmarks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder_id: folderId, name, url }),
+      });
 
-    if (res.ok) {
-      setName("");
-      setUrl("");
-      setErrors({});
-      props.onCreated();
-      return;
-    }
+      if (res.ok) {
+        setName("");
+        setUrl("");
+        setErrors({});
+        props.onCreated();
+        return;
+      }
 
-    const body = await res.json();
-    if (body.error.fields) {
-      setErrors(body.error.fields);
-    } else if (res.status === 404) {
-      setErrors({ folder_id: body.error.message });
-    } else {
-      setErrors({ name: body.error.message });
+      const body = await res.json();
+      if (body.error.fields) {
+        setErrors(body.error.fields);
+      } else if (res.status === 404) {
+        setErrors({ folder_id: body.error.message });
+      } else {
+        setErrors({ name: body.error.message });
+      }
+    } catch {
+      setErrors({ form: "Could not reach the server. Try again." });
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
     <form className="bookmark-form" onSubmit={handleSubmit}>
       <div className="field">
-        <select value={folderId} onChange={(e) => setFolderId(e.target.value)}>
+        <select
+          aria-label="Folder"
+          value={folderId}
+          disabled={submitting}
+          onChange={(e) => setFolderId(e.target.value)}
+        >
           <option value="">Pick a folder</option>
           {props.folders.map((folder) => (
             <option key={folder.id} value={folder.id}>
@@ -77,6 +90,7 @@ export function AddBookmarkForm(props: AddBookmarkFormProps) {
         <input
           placeholder="Name"
           value={name}
+          disabled={submitting}
           onChange={(e) => setName(e.target.value)}
         />
         {errors.name && <p>{errors.name}</p>}
@@ -86,12 +100,14 @@ export function AddBookmarkForm(props: AddBookmarkFormProps) {
         <input
           placeholder="https://…"
           value={url}
+          disabled={submitting}
           onChange={(e) => setUrl(e.target.value)}
         />
         {errors.url && <p>{errors.url}</p>}
       </div>
 
-      <button>Add</button>
+      <button disabled={submitting}>Add</button>
+      {errors.form && <p>{errors.form}</p>}
     </form>
   );
 }

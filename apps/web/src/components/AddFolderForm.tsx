@@ -7,6 +7,7 @@ type AddFolderFormProps = {
 export function AddFolderForm(props: AddFolderFormProps) {
   const [name, setName] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -21,24 +22,31 @@ export function AddFolderForm(props: AddFolderFormProps) {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    const res = await fetch("/api/folders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
 
-    if (res.ok) {
-      setName("");
-      setErrors({});
-      props.onCreated();
-      return;
-    }
+      if (res.ok) {
+        setName("");
+        setErrors({});
+        props.onCreated();
+        return;
+      }
 
-    const body = await res.json();
-    if (body.error.fields) {
-      setErrors(body.error.fields);
-    } else {
-      setErrors({ name: body.error.message });
+      const body = await res.json();
+      if (body.error.fields) {
+        setErrors(body.error.fields);
+      } else {
+        setErrors({ name: body.error.message });
+      }
+    } catch {
+      setErrors({ form: "Could not reach the server. Try again." });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -47,10 +55,12 @@ export function AddFolderForm(props: AddFolderFormProps) {
       <input
         placeholder="New folder"
         value={name}
+        disabled={submitting}
         onChange={(e) => setName(e.target.value)}
-      />{" "}
-      <button>Add</button>
+      />
+      <button disabled={submitting}>Add</button>
       {errors.name && <p>{errors.name}</p>}
+      {errors.form && <p>{errors.form}</p>}
     </form>
   );
 }
