@@ -44,7 +44,11 @@ export function AddFolderForm(props: AddFolderFormProps) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <input
+        placeholder="New folder"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />{" "}
       <button>Add</button>
       {errors.name && <p>{errors.name}</p>}
     </form>

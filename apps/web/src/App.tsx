@@ -8,15 +8,22 @@ export function App() {
   const [foldersVersion, setFoldersVersion] = useState(0);
 
   return (
-    <>
-      <AddFolderForm onCreated={() => setFoldersVersion((v) => v + 1)} />
-      <FolderList
-        onSelect={setSelectedFolderId}
-        foldersVersion={foldersVersion}
-      />
-      {selectedFolderId != null && (
-        <BookmarkList key={selectedFolderId} folderId={selectedFolderId} />
-      )}
-    </>
+    <div className="app">
+      <aside className="sidebar">
+        <h1>Bookmarks</h1>
+        <AddFolderForm onCreated={() => setFoldersVersion((v) => v + 1)} />
+        <FolderList
+          onSelect={setSelectedFolderId}
+          foldersVersion={foldersVersion}
+        />
+      </aside>
+      <main className="main">
+        {selectedFolderId != null ? (
+          <BookmarkList key={selectedFolderId} folderId={selectedFolderId} />
+        ) : (
+          <p>Pick a folder to see its bookmarks.</p>
+        )}
+      </main>
+    </div>
   );
 }
