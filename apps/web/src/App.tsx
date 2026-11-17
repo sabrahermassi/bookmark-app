@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Folder, LoadState } from "./types";
+import { api } from "./api";
 import { FolderList } from "./components/FolderList";
 import { BookmarkList } from "./components/BookmarkList";
 import { AddFolderForm } from "./components/AddFolderForm";
@@ -22,9 +23,7 @@ export function App() {
 
     async function load() {
       try {
-        const res = await fetch("/api/folders");
-        if (!res.ok) throw new Error();
-        const body = await res.json();
+        const body = await api<{ folders: Folder[] }>("/folders");
         if (active) setFolders({ status: "ready", data: body.folders });
       } catch {
         if (active)

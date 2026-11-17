@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Bookmark, Folder, LoadState } from "../types";
+import { api } from "../api";
 
 const DEBOUNCE_MS = 300;
 
@@ -24,9 +25,9 @@ export function SearchResults(props: SearchResultsProps) {
       setResults({ status: "loading" });
       try {
         const name = encodeURIComponent(props.text.trim());
-        const res = await fetch(`/api/bookmarks?name=${name}`);
-        if (!res.ok) throw new Error();
-        const body = await res.json();
+        const body = await api<{ bookmarks: Bookmark[] }>(
+          `/bookmarks?name=${name}`,
+        );
         if (active) setResults({ status: "ready", data: body.bookmarks });
       } catch {
         if (active) setResults({ status: "error", message: "Search failed." });

@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from "react";
 import type { Bookmark, Folder } from "../types";
+import { api, ApiError } from "../api";
 
 type EditBookmarkDialogProps = {
   bookmark: Bookmark;
@@ -50,27 +51,21 @@ export function EditBookmarkDialog(props: EditBookmarkDialogProps) {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/bookmarks/${props.bookmark.id}`, {
+      await api<Bookmark>(`/bookmarks/${props.bookmark.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(changes),
+        body: changes,
       });
-
-      if (res.ok) {
-        props.onSaved();
-        return;
-      }
-
-      const body = await res.json();
-      if (body.error.fields) {
-        setErrors(body.error.fields);
-      } else if (res.status === 409) {
-        setErrors({ name: body.error.message });
+      props.onSaved();
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        setErrors({ form: "Something went wrong. Try again." });
+      } else if (err.fields) {
+        setErrors(err.fields);
+      } else if (err.status === 409) {
+        setErrors({ name: err.message });
       } else {
-        setErrors({ form: body.error.message });
+        setErrors({ form: err.message });
       }
-    } catch {
-      setErrors({ form: "Could not reach the server. Try again." });
     } finally {
       setSubmitting(false);
     }

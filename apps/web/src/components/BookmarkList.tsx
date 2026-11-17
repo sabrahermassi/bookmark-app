@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Bookmark, Folder, LoadState } from "../types";
+import { api, ApiError } from "../api";
 import { EditBookmarkDialog } from "./EditBookmarkDialog";
 
 const PAGE_SIZE = 20;
@@ -38,11 +39,9 @@ export function BookmarkList(props: BookmarkListProps) {
 
     async function load() {
       try {
-        const res = await fetch(
-          `/api/folders/${props.folderId}/bookmarks?limit=${PAGE_SIZE}&offset=0`,
+        const body = await api<{ bookmarks: Bookmark[] }>(
+          `/folders/${props.folderId}/bookmarks?limit=${PAGE_SIZE}&offset=0`,
         );
-        if (!res.ok) throw new Error();
-        const body = await res.json();
         if (active) {
           setBookmarks({ status: "ready", data: body.bookmarks });
           setHasMore(body.bookmarks.length === PAGE_SIZE);
@@ -76,12 +75,10 @@ export function BookmarkList(props: BookmarkListProps) {
     setLoadingMore(true);
     setMoreError(null);
     try {
-      const res = await fetch(
-        `/api/folders/${props.folderId}/bookmarks?limit=${PAGE_SIZE}&offset=${offset}`,
+      const body = await api<{ bookmarks: Bookmark[] }>(
+        `/folders/${props.folderId}/bookmarks?limit=${PAGE_SIZE}&offset=${offset}`,
       );
-      if (!res.ok) throw new Error();
-      const body = await res.json();
-      const page: Bookmark[] = body.bookmarks;
+      const page = body.bookmarks;
       setBookmarks((prev) =>
         prev.status === "ready"
           ? { status: "ready", data: [...prev.data, ...page] }
@@ -99,13 +96,17 @@ export function BookmarkList(props: BookmarkListProps) {
     setDeletingId(id);
     setRowError(null);
     try {
-      const res = await fetch(`/api/bookmarks/${id}`, { method: "DELETE" });
-      if (!res.ok && res.status !== 404) throw new Error();
-      // 204 = deleted. 404 = already gone. Either way, refresh the list.
+      await api(`/bookmarks/${id}`, { method: "DELETE" });
       setConfirmingId(null);
       setReload((r) => r + 1);
-    } catch {
-      setRowError({ id, message: "Could not delete. Try again." });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        // Already gone (deleted in another tab): just refresh the list
+        setConfirmingId(null);
+        setReload((r) => r + 1);
+      } else {
+        setRowError({ id, message: "Could not delete. Try again." });
+      }
     } finally {
       setDeletingId(null);
     }
